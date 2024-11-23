@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pet Depot</title>
+    <style>
+        figure, section { display: inline-block; vertical-align: top; }
+        img { width: 200px; height: auto; }
+        button {
+            background-color: blue; min-width: 100px; height: 30px; border: none; color: white;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+        button:hover { background-color: #4a73d1; }
+        button:active { transform: translateY(2px); }
+        header { display: flex; justify-content: space-between; align-items: center; }
+        #title { display: inline-block; }
+        .product-box { border: 1px solid black; }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.7.16/dist/vue.js"></script>
+</head>
+<body>
+    <div id="app">
+        <header>
+            <h1 id="title" v-text="sitename"></h1>
+            <button id="checkout_button" v-on:click="showCheckout">
+                {{ cartItemCount }}
+                <i class="fas fa-cart-plus"></i> Checkout
+            </button>
+        </header>
+        <main>
+            <div v-if="showProduct">
+                <div v-for="product in sortedProducts" class="product-box">
+                    <figure>
+                        <img v-bind:src="product.image">
+                    </figure>
+                    <section>
+                        <h2 v-text="product.title"></h2>
+                        <p v-html="product.description"></p>
+                        <p v-if="availableStock(product) > 0">In stock: {{ availableStock(product) }}</p>
+                        <p v-else style="color: red;">Out of stock</p>
+                        <p>Price: {{ product.price }}</p>
+                        <button v-on:click="addToCart(product)" v-if="canAddToCart(product)">Add to cart</button>
+                        <button disabled v-else>Out of Stock</button>
+                        <div>
+                            <span v-for="n in product.rating">★</span>
+                            <span v-for="n in 5 - product.rating">☆</span>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script>
+        let webstore = new Vue({
+            el: "#app",
+            data: {
+                sitename: "Vue.js Pet Depot",
+                products: [], // Fetch dynamically
+                cart: [],
+                showProduct: true
+            },
+            methods: {
+                async fetchProducts() {
+                    try {
+                        const response = await fetch('http://localhost:3000/collection/products'); // Replace with Render URL in production
+                        const products = await response.json();
+                        this.products = products;
+                    } catch (error) {
+                        console.error("Error fetching products:", error);
+                    }
+                },
+                canAddToCart: function(product) {
+                    return this.availableStock(product) > this.cart.filter(id => id === product.id).length;
+                },
+                addToCart: function(product) {
+                    this.cart.push(product.id);
+                },
+                showCheckout: function() {
+                    this.showProduct = !this.showProduct;
+                },
+                availableStock: function(product) {
+                    return product.availableInventory - this.cart.filter(id => id === product.id).length;
+                }
+            },
+            computed: {
+                cartItemCount: function() {
+                    return this.cart.length || "";
+                },
+                sortedProducts() {
+                    let productsArray = this.products.slice(0);
+                    function compare(a, b) {
+                        if (a.price > b.price) return 1;
+                        if (a.price < b.price) return -1;
+                    }
+                    return productsArray.sort(compare);
+                }
+            },
+            mounted() {
+                this.fetchProducts(); // Fetch products when Vue instance is created
+            }
+        });
+    </script>
+</body>
+</html>
